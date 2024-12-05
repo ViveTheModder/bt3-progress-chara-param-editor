@@ -11,18 +11,42 @@ import java.util.Scanner;
 
 public class ProgressCharaParam 
 {
-	private RandomAccessFile pcp;
+	private int charaCnt;
+	private static RandomAccessFile pcp;
 	private String[] charaNames;
 	public ProgressCharaParam(File src) 
 	{
 		try 
 		{
-			this.pcp = new RandomAccessFile(src,"rw");
+			pcp = new RandomAccessFile(src,"rw");
 		} 
 		catch (IOException e) 
 		{
-			e.printStackTrace();
+			setErrorLog(e);
 		}
+	}
+	public static int getCharaCnt() throws IOException
+	{
+		int cnt=0, fileSize, pos=0, nextPos=0;
+		if (Main.performFromPak)
+		{
+			pcp.seek(4);
+			pos = LittleEndian.getInt(pcp.readInt()); //get address from PAK file index
+			nextPos = LittleEndian.getInt(pcp.readInt());
+			fileSize = nextPos;
+		}
+		else fileSize = (int) pcp.length();
+		
+		pcp.seek(pos);
+		while (pcp.getFilePointer() != fileSize)
+		{
+			if (LittleEndian.getInt(pcp.readInt())==40000) cnt++;
+		}
+		return cnt;
+	}
+	private void setCharaCnt() throws IOException
+	{
+		this.charaCnt = getCharaCnt();
 	}
 	private void setCharaNames() throws IOException
 	{
@@ -38,7 +62,7 @@ public class ProgressCharaParam
 		}
 		sc.close();
 	}
-	private void setErrorLog(Exception e)
+	public static void setErrorLog(Exception e)
 	{
 		File errorLog = new File("errors.log");
 		try {
@@ -51,11 +75,13 @@ public class ProgressCharaParam
 		}
 		System.exit(1);
 	}
-	public void read()
+	public void read(boolean saveFromFile)
 	{
 		try
 		{
 			int pos=0;
+			String text, fullText="";
+			setCharaCnt();
 			setCharaNames();
 			if (Main.performFromPak)
 			{
@@ -63,31 +89,42 @@ public class ProgressCharaParam
 				pos = LittleEndian.getInt(pcp.readInt()); //get address from PAK file index
 			}
 			pcp.seek(pos);
-			for (int i=0; i<161; i++)
+			for (int i=0; i<charaCnt; i++)
 			{
-				System.out.println("["+charaNames[i]+"]");
-				System.out.println("* "+Main.OPTIONS[0]+": "+LittleEndian.getInt(pcp.readInt()));
+				if (i<charaNames.length) text="["+charaNames[i]+"]\n";
+				else text="[Unknown Character (ID: "+i+")]\n";
+				text+="* "+Main.OPTIONS[0]+": "+LittleEndian.getInt(pcp.readInt())+"\n";
 				pcp.readInt(); //skip 40000, an unused value that every character has
 				int stateOfHeartVal = LittleEndian.getShort(pcp.readShort());
 				String stateOfHeart = "Evil";
 				if (stateOfHeartVal==1) stateOfHeart = "Pure";
-				System.out.println("* "+Main.OPTIONS[1]+": "+stateOfHeart);
+				text+="* "+Main.OPTIONS[1]+": "+stateOfHeart+"\n";
 				for (int j=2; j<5; j++)
-					System.out.println("* "+Main.OPTIONS[j]+": "+LittleEndian.getShort(pcp.readShort()));
-				System.out.println("* "+Main.OPTIONS[5]);
+					text+="* "+Main.OPTIONS[j]+": "+LittleEndian.getShort(pcp.readShort())+"\n";
+				text+="* "+Main.OPTIONS[5]+"\n";
 				for (int j=0; j<7; j++)
-					System.out.println("-> Slot #"+(j+1)+": "+LittleEndian.getInt(pcp.readInt()));
-				System.out.println("* "+Main.OPTIONS[6].replace(" ID", ""));
+					text+="-> Slot #"+(j+1)+": "+LittleEndian.getInt(pcp.readInt())+"\n";
+				text+="* "+Main.OPTIONS[6].replace(" ID", "")+"\n";
 				for (int j=0; j<4; j++)
 				{
 					int index = pcp.readUnsignedByte();
 					String name=null;
 					if (index!=255) name=charaNames[index];
-					System.out.println("-> Character #"+(j+1)+": "+name);
+					text+="-> Character #"+(j+1)+": "+name+"\n";
 				}
-				System.out.println("* "+Main.OPTIONS[7]);
+				text+="* "+Main.OPTIONS[7]+"\n";
 				for (int j=0; j<3; j++)
-					System.out.println("-> Camera Value #"+(j+1)+": "+LittleEndian.getFloat(pcp.readFloat()));
+					text+="-> Camera Value #"+(j+1)+": "+LittleEndian.getFloat(pcp.readFloat())+"\n";		
+				fullText+=text;
+				if (!saveFromFile) System.out.print(text);
+			}
+			if (saveFromFile)
+			{
+				File outputTxt = new File("output.txt");
+				FileWriter fw = new FileWriter(outputTxt);
+				fw.write(fullText);
+				fw.close();
+				Desktop.getDesktop().open(outputTxt);
 			}
 		}
 		catch (IOException e)
@@ -95,11 +132,12 @@ public class ProgressCharaParam
 			setErrorLog(e);
 		}
 	}
-	public void write(byte[] arr, int offset, int charaID)
+	public void write(byte[] arr, int offset, int length, int charaID)
 	{
 		try
 		{
 			int fileSize, pos=0, nextPos=0;
+			setCharaCnt();
 			if (Main.performFromPak)
 			{
 				pcp.seek(4);
@@ -109,14 +147,20 @@ public class ProgressCharaParam
 			}
 			else fileSize = (int) pcp.length();
 			pcp.seek(pos);
-			for (int i=0; i<161; i++)
+			for (int i=0; i<charaCnt; i++)
 			{
 				if (Main.applyToAll) charaID=i;
 				if (i==charaID)
 				{
 					pcp.seek(pos+(i*60)+offset);
 					if (pcp.getFilePointer()>=fileSize) return; //more or less an EOFException but not really
-					pcp.write(arr);
+					if (length>0 && length<arr.length) //prevent overwriting remaining values from the array with 0
+					{
+						byte[] temp = new byte[length];
+						System.arraycopy(arr, 0, temp, 0, length);
+						pcp.write(temp);
+					}
+					else pcp.write(arr);
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 package cmd;
 //Budokai Tenkaichi 3 Progress Character Parameter Editor by ViveTheModder
 import java.io.File;
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Main 
@@ -16,8 +17,8 @@ public class Main
 	{
 		Scanner sc = new Scanner(System.in);
 		File src;
-		boolean argsInvalid=false;
-		int charaID=0, comVal=0, optionNum;
+		boolean argsInvalid=false, saveFromFile=false;
+		int charaID=0, comVal=0, inputArrLen=0, max=0, optionNum;
 		byte[] charaIDs = new byte[4];
 		float[] cameraVals = new float[3];
 		int[] slotPrices = new int[7];
@@ -93,6 +94,7 @@ public class Main
 			}
 			else System.out.println("Invalid format for option (not a number). Try again!\n");
 		}
+		ProgressCharaParam pcp = new ProgressCharaParam(src);
 		switch (optionNum) //get additional inputs depending on selected option
 		{
 			case 0:
@@ -173,7 +175,7 @@ public class Main
 				if (input.matches("^\\d+(\\s+\\d+)*$"))
 				{
 					String[] inputArr = input.split(" ");
-					int inputArrLen = inputArr.length;
+					inputArrLen = inputArr.length;
 					if (inputArrLen>slotPrices.length) inputArrLen=slotPrices.length;
 					for (int i=0; i<inputArrLen; i++)
 						slotPrices[i]=Integer.parseInt(inputArr[i]);
@@ -185,17 +187,25 @@ public class Main
 			case 6:
 			while (true)
 			{
-				System.out.println("Enter up to 4 Restricted Character IDs, separated by spaces, where each ID ranges from 0 to 160:");
+				try 
+				{
+					max = ProgressCharaParam.getCharaCnt()-1;
+				} 
+				catch (IOException e) 
+				{
+					ProgressCharaParam.setErrorLog(e);
+				}
+				System.out.println("Enter up to 4 Restricted Character IDs, separated by spaces, where each ID ranges from 0 to "+max+":");
 				String input = sc.nextLine();
 				if (input.matches("^\\d+(\\s+\\d+)*$"))
 				{
 					String[] inputArr = input.split(" ");
-					int inputArrLen = inputArr.length;
+					inputArrLen = inputArr.length;
 					if (inputArrLen>charaIDs.length) inputArrLen=charaIDs.length;
 					for (int i=0; i<inputArrLen; i++)
 					{
 						charaIDs[i]=(byte) Integer.parseInt(inputArr[i]);
-						if (charaIDs[i]>160) charaIDs[i]=(byte)160;
+						if (charaIDs[i]>max) charaIDs[i]=(byte)max;
 					}
 					break;
 				}
@@ -210,7 +220,7 @@ public class Main
 				if (input.matches("^[+-]?\\d*\\.\\d+(\\s+[+-]?\\d*\\.\\d+)*$"))
 				{
 					String[] inputArr = input.split(" ");
-					int inputArrLen = inputArr.length;
+					inputArrLen = inputArr.length;
 					if (inputArrLen>cameraVals.length) inputArrLen=cameraVals.length;
 					for (int i=0; i<inputArrLen; i++)
 						cameraVals[i] = Float.parseFloat(inputArr[i]);
@@ -218,13 +228,41 @@ public class Main
 				}
 				else System.out.println("Invalid decimal number amount and/or invalid format (must contain only numbers). Try again!\n");
 			}
+			case 8:
+			while (true)
+			{
+				System.out.println("Read character parameters right away (N) or also save them in a file (Y)?");
+				String input = sc.nextLine();
+				if (input.equals("N"))
+				{
+					saveFromFile=false;
+					break;
+				}
+				else if (input.equals("Y")) 
+				{
+					saveFromFile=true;
+					break;
+				}
+				else System.out.println("Invalid input. Try again!\n");
+			}
 			break;
 		}
 		if (optionNum<8 && !applyToAll) //get character ID if "-a" argument has not been entered
 		{
 			while (true)
 			{
-				System.out.println("Enter an ID for the character whose parameters you want to overwrite, where the ID ranges from 0 to 160:");
+				if (max==0) //get character count only if it has not been assigned already 
+				{
+					try 
+					{
+						max = ProgressCharaParam.getCharaCnt()-1;
+					} 
+					catch (IOException e) 
+					{
+						ProgressCharaParam.setErrorLog(e);
+					}
+				}
+				System.out.println("Enter an ID for the character whose parameters you want to overwrite, where the ID ranges from 0 to "+max+":");
 				String input = sc.nextLine();
 				if (input.matches("\\d+"))
 				{
@@ -237,35 +275,34 @@ public class Main
 		}
 		sc.close();
 		long start = System.currentTimeMillis();
-		ProgressCharaParam pcp = new ProgressCharaParam(src);
 		switch (optionNum) //perform read/write action depending on selected option
 		{
 			case 0:
-			pcp.write(LittleEndian.getByteArrayFromInt(comVal), 0, charaID);
+			pcp.write(LittleEndian.getByteArrayFromInt(comVal), 0, 0, charaID);
 			break;
 			case 1:
-			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[0]), 8, charaID);
+			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[0]), 8, 0, charaID);
 			break;
 			case 2:
-			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[1]), 10, charaID);
+			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[1]), 10, 0, charaID);
 			break;
 			case 3:
-			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[2]), 12, charaID);	
+			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[2]), 12, 0, charaID);	
 			break;
 			case 4:
-			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[3]), 14, charaID);
+			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[3]), 14, 0, charaID);
 			break;
 			case 5:
-			pcp.write(LittleEndian.getByteArrayFromIntArray(slotPrices), 16, charaID);
+			pcp.write(LittleEndian.getByteArrayFromIntArray(slotPrices), 16, inputArrLen, charaID);
 			break;
 			case 6:
-			pcp.write(charaIDs, 44, charaID);
+			pcp.write(charaIDs, 44, inputArrLen, charaID);
 			break;
 			case 7:
-			pcp.write(LittleEndian.getByteArrayFromFloatArray(cameraVals), 48, charaID);
+			pcp.write(LittleEndian.getByteArrayFromFloatArray(cameraVals), 48, inputArrLen, charaID);
 			break;
 			case 8:
-			pcp.read();
+			pcp.read(saveFromFile);
 			break;
 		}
 		long finish = System.currentTimeMillis();
