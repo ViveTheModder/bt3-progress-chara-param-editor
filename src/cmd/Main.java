@@ -9,8 +9,13 @@ public class Main
 	private static final String[] FILENAMES = {"resident_chara_param.pak","00_progress_chara_param.dat"};
 	static final String[] OPTIONS =
 	{
-		"COM Modifier (Unused)","Character State of Heart","Costume Amount","Destruction Point Amount","Available Slot Amount",
+		"COM Modifier","Character State of Heart","Costume Amount","Destruction Point Amount","Available Slot Amount",
 		"Slot Prices","Restricted Character IDs","Camera Values","Read Character Parameters"
+	};
+	static final String[] POTARAS =
+	{
+		"Goku Type","Vegeta Type","Gohan Type","Trunks Type","Piccolo Type","Krillin Type","Tien Type","Chiaotzu Type",
+		"Yajirobe Type","Frieza Type","Cell Type","Majin Buu Type","Broly Type","Ginyu Type","Recoome Type",
 	};
 	static boolean applyToAll=false, isForWii=false, performFromPak=false;
 	public static void main(String[] args) 
@@ -79,7 +84,7 @@ public class Main
 		}
 		while (true) //validate option number
 		{
-			System.out.println("Enter one of the following options:");
+			System.out.println("\nEnter one of the following options:");
 			for (int i=0; i<OPTIONS.length; i++)
 			{
 				if (i!=OPTIONS.length-1) System.out.println(i+". Change "+OPTIONS[i]);
@@ -97,17 +102,24 @@ public class Main
 		ProgressCharaParam pcp = new ProgressCharaParam(src);
 		switch (optionNum) //get additional inputs depending on selected option
 		{
-			case 0:
+		case 0:
 			while (true)
 			{
-				System.out.println("Enter a COM Value between 0 and 2 (other values are discouraged):");
+				System.out.println("Enter a COM Value between 0 and 17 (other values are discouraged).\n"
+				+ "Values from 0 to 2 do not affect the COM in a noticeable way, but these values however do:\n");
+				for (int i=0; i<POTARAS.length; i++) System.out.println(String.format("%2d", (i+3))+" - "+POTARAS[i]);
 				String input = sc.nextLine();
-				if (input.matches("[0-2]+") && input.length()==1) 
+				if (input.matches("\\d+")) 
 				{
-					comVal=Integer.parseInt(input);
-					break;
+					int temp =Integer.parseInt(input);
+					if (temp<=17)
+					{
+						comVal=temp;
+						break;
+					}
+					else System.out.println("Discouraged value. Try again!\n");
 				}
-				else System.out.println("Invalid format or discouraged value. Try again!\n");
+				else System.out.println("Invalid format for COM Modifier. Try again!\n");
 			}
 			break;
 			case 1: 
