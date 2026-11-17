@@ -79,7 +79,7 @@ public class Main {
 			}
 			String input = sc.nextLine();
 			if (input.matches("\\d+") && input.length() == 1) {
-				optionNum = Integer.parseInt(input);
+				optionNum = Integer.parseUnsignedInt(input);
 				if (optionNum < OPTIONS.length) break;
 				else System.out.println("Option number does not correspond to any option. Try again!\n");
 			} 
@@ -96,7 +96,7 @@ public class Main {
 					System.out.println(String.format("%2d", (i + 3)) + " - " + POTARAS[i]);
 				String input = sc.nextLine();
 				if (input.matches("\\d+")) {
-					int temp = Integer.parseInt(input);
+					int temp = Integer.parseUnsignedInt(input);
 					if (temp <= 17) {
 						comVal = temp;
 						break;
@@ -160,7 +160,7 @@ public class Main {
 					if (inputArrLen > slotPrices.length)
 						inputArrLen = slotPrices.length;
 					for (int i = 0; i < inputArrLen; i++)
-						slotPrices[i] = Integer.parseInt(inputArr[i]);
+						slotPrices[i] = Integer.parseUnsignedInt(inputArr[i]);
 					break;
 				} 
 				else System.out.println("Invalid delimiter (not a space) or invalid slot price format (not a number). Try again!\n");
@@ -174,7 +174,8 @@ public class Main {
 				catch (IOException e) {
 					ProgressCharaParam.setErrorLog(e);
 				}
-				System.out.println("Enter up to 4 Restricted Character IDs, separated by spaces, where each ID ranges from 0 to " + max + ":");
+				System.out.println("Enter up to 4 Restricted Character IDs, separated by spaces, where each ID ranges from 0 to " + max
+						+ " (or 255 to disable restrictions):");
 				String input = sc.nextLine();
 				if (input.matches("^\\d+(\\s+\\d+)*$")) {
 					String[] inputArr = input.split(" ");
@@ -182,9 +183,8 @@ public class Main {
 					if (inputArrLen > charaIDs.length)
 						inputArrLen = charaIDs.length;
 					for (int i = 0; i < inputArrLen; i++) {
-						charaIDs[i] = (byte) Integer.parseInt(inputArr[i]);
-						if (charaIDs[i] > max)
-							charaIDs[i] = (byte) max;
+						charaIDs[i] = (byte) Integer.parseUnsignedInt(inputArr[i]);
+						if (charaIDs[i] > max) charaIDs[i] = (byte) max;
 					}
 					break;
 				} 
@@ -208,7 +208,7 @@ public class Main {
 			}
 		case 8:
 			while (true) {
-				System.out.println("Read character parameters right away (N) or also save them in a file (Y)?");
+				System.out.println("Read/write character parameters right away (N) or also save them in a file (Y)?");
 				String input = sc.nextLine();
 				if (input.equals("N")) {
 					saveFromFile = false;
@@ -237,7 +237,7 @@ public class Main {
 				System.out.println("Enter an ID for the character whose parameters will change, where the ID ranges from 0 to " + max + ":");
 				String input = sc.nextLine();
 				if (input.matches("\\d+")) {
-					charaID = Integer.parseInt(input);
+					charaID = Integer.parseUnsignedInt(input);
 					if (charaID > 160) charaID = 160; // handle overflow
 					break;
 				} 
@@ -264,13 +264,13 @@ public class Main {
 			pcp.write(LittleEndian.getByteArrayFromShort(optionsShort[3]), 14, 0, charaID);
 			break;
 		case 5:
-			pcp.write(LittleEndian.getByteArrayFromIntArray(slotPrices), 16, inputArrLen, charaID);
+			pcp.write(LittleEndian.getByteArrayFromIntArray(slotPrices), 16, inputArrLen * 4, charaID);
 			break;
 		case 6:
 			pcp.write(charaIDs, 44, inputArrLen, charaID);
 			break;
 		case 7:
-			pcp.write(LittleEndian.getByteArrayFromFloatArray(cameraVals), 48, inputArrLen, charaID);
+			pcp.write(LittleEndian.getByteArrayFromFloatArray(cameraVals), 48, inputArrLen * 4, charaID);
 			break;
 		case 8:
 			pcp.read(saveFromFile);
